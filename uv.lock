@@ -338,7 +338,7 @@ wheels = [
 
 [[package]]
 name = "nanoagent-binge-watch-planner"
-version = "0.1.5"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },

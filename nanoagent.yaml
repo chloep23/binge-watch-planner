@@ -1,7 +1,7 @@
 _ > nanoagent.plugin.v0001.ManifestConfig:
 id: binge-watch-planner
 name: Binge Watch Planner
-version: 0.1.5
+version: 0.2.1
 status: ready
 spec: nanoagent.plugin/v0001
 
@@ -41,12 +41,12 @@ tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
       Rules. Watch the shows in the watchlist's order and each show's episodes in theirs. A show is finished, or has left, before the next one starts: never skip ahead to a shorter episode or a later show.
       Fitting. An episode must fit whole inside one block: it may start no earlier than the block's start and must end at or before its end. If the next episode does not fit in the time left, the rest of that block is wasted, and you move on to the next block.
       Blocks. Blocks never merge, even when they touch. A block ending at 20:00 and one starting at 20:00 are two blocks, and an episode longer than either of them alone cannot be watched across them.
-      Leaving. Before starting a show's next episode, check whether it would end after the show's leaving time. If so, the show is done: its remaining episodes stay unwatched and you move on to the next show at once, in the same block if time is left in it. Ending exactly at the leaving time is allowed. If the episode would end before the leaving time but does not fit in the block, the block rule applies instead: the rest of that block is wasted and you check again at the next block.
+      Leaving. Before starting an episode, check whether it would end after its show's leaving time. If so the show is done: its remaining episodes stay unwatched and you move to the next show at once, in the same block if time is left. Ending exactly at the leaving time is allowed. An episode that ends in time but does not fit the block falls under the block rule instead.
       Days. An episode counts for the day it ends on, and midnight opens a day: an episode ending at 00:00 or at 00:20 counts for the new day, not the one before.
-      Plan. Four tool calls, one per step, nothing else: (1) read_watchlist; (2) read_free_time, with the task's two file names copied exactly as given; (3) report_schedule once, with every day of the week and every show; (4) submit. Steps are limited and submit is the one that counts, so keep to four calls. Only if a single report_schedule call would be too long to write in full, split it in two and take five: the days with shows [], then days [] with the shows. Every report_schedule call carries all three of task, days and shows, whatever it is reporting: send [] for the one you are not filling in that call, never leave it out. Reason briefly: one short line per block, no prose.
-      Reporting. report_schedule takes task (the task input, copied exactly as given), days (one entry per day from first_day to last_day, each with the episodes ending that day in the order they were watched, as show, episode and end) and shows (one entry per show, with outcome finished, left or out-of-time, finished_at when its last episode ended or null, and unwatched, the episode numbers never watched). Report every day, including days nothing was watched, with episodes []. Never shorten a call by leaving days or shows out: what you send is merged as it stands, and the report is not complete until the rest arrives. If one call would run long, make two: the first with the days and shows [], the second with days [] and the shows. A call that leaves a field out is refused.
+      Plan. Four tool calls, one per step, nothing else: (1) read_watchlist; (2) read_free_time, with the task's two file names copied exactly as given; (3) report_schedule once, with every day and every show; (4) submit. Reason briefly: one short line per block, no prose.
+      Reporting. report_schedule takes task (the task input, copied exactly as given), days (one entry per day from first_day to last_day, each with the episodes ending that day in the order watched, as show, episode and end) and shows (one entry per show, with outcome finished, left or out-of-time, finished_at or null, and unwatched). Report every day, including days nothing was watched, with episodes [].
       Other tools. merge_free_time and total_runtime answer narrower questions and are not how this task is solved: merged blocks are not the blocks you watch in, and free time adding up to more than the watchlist's runtime does not mean the watchlist gets finished.
-      Submit. When a call returns complete true, call submit with that call's report exactly as returned (task, run, days, shows), without changing or re-checking anything.
+      Submit. When a call returns complete true, call submit with that call's report exactly as returned (task, run, days, shows), changing nothing. Call submit itself; never write a summary in its place.
   read-watchlist:
     description: Read a watchlist file and state its shows in order, each one's episodes and runtimes, and when it leaves the platform
     runner: tool
