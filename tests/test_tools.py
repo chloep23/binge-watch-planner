@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from helpers import DAYS, FREE_TIME, WATCHLIST, Run, stage
-from slimconfig import build_output
+from slimconfig import build_output, plain_output
 
 from contract import ReportInput, SourceInput, WatchlistInput
 from plugin import merge_free_time, plan_week, read_free_time, read_watchlist, report_schedule, total_runtime
@@ -48,6 +48,21 @@ def test_report_schedule_merges_two_calls_and_reports_completeness(tmp_path: Pat
     second = report_schedule(build_output({"task": run.task, "days": days[4:], "shows": shows}, ReportInput), tmp_path)
     assert second.covered == 7 and second.complete is True
     assert [entry.date for entry in second.report.days] == sorted(DAYS), "the week's order, not the calls'"
+
+
+def test_the_two_call_route_the_instructions_describe(tmp_path: Path) -> None:
+    """The task's instructions offer a second report_schedule call when one would run long: the
+    days with shows [], then days [] with the shows. Every call carries all three fields, because
+    the contract has no defaults and a call that leaves one out is refused."""
+    run = Run(tmp_path)
+    run.read()
+    days, shows = run.answer()
+    first = report_schedule(build_output({"task": run.task, "days": days, "shows": []}, ReportInput), tmp_path)
+    assert first.covered == 7 and first.complete is False, "the days alone are not a complete report"
+    second = report_schedule(build_output({"task": run.task, "days": [], "shows": shows}, ReportInput), tmp_path)
+    assert second.complete is True
+    run.submitted = plain_output(second.report)
+    assert run.verdict()["valid"], "the plan reported in two calls is the same plan"
 
 
 def test_merge_free_time_joins_only_what_touches(tmp_path: Path) -> None:
