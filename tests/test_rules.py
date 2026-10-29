@@ -87,6 +87,31 @@ def test_a_show_is_never_skipped_for_a_later_one_that_would_fit() -> None:
     assert [outcome[1] for outcome in outcomes] == ["out-of-time", "out-of-time"]
 
 
+def test_the_leaving_check_comes_before_the_block_check() -> None:
+    """An episode that would end both after its show leaves and past the block end: rule 4 wins,
+    the show is done at once, and the next show gets the rest of the block."""
+    days, outcomes = both(
+        shows(("A", "2026-03-02 19:30", [90]), ("B", None, [50])),
+        week(("2026-03-02 19:00", "2026-03-02 20:00")),
+    )
+    assert [(w[0], w[1]) for w in days[0][1]] == [("B", 1)]
+    assert [(o[0], o[1]) for o in outcomes] == [("A", "left"), ("B", "finished")]
+
+
+def test_an_episode_that_fits_the_leaving_time_but_not_the_block_waits_for_the_next_block() -> None:
+    """The other half: the episode ends before the show leaves, so rule 2 decides and the rest of
+    the block is wasted. The show is not abandoned, and it is watched in the next block."""
+    days, outcomes = both(
+        shows(("A", "2026-03-03 23:00", [50]), ("B", None, [20])),
+        week(("2026-03-02 19:00", "2026-03-02 19:40"), ("2026-03-02 20:00", "2026-03-02 21:00"),
+             first="2026-03-02", last="2026-03-03"),
+    )
+    assert [(w[0], w[1], w[2]) for w in days[0][1]] == [("A", 1, "2026-03-02 20:50")], (
+        "the first block is wasted and A is watched in the second, not abandoned"
+    )
+    assert [(o[0], o[1]) for o in outcomes] == [("A", "finished"), ("B", "out-of-time")]
+
+
 def test_an_episode_counts_for_the_day_it_ends_on() -> None:
     days, _ = both(
         shows(("A", None, [60, 20])),

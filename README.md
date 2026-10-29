@@ -51,17 +51,23 @@ every one runs inside `first_day 00:00` to `last_day 23:59`.
 3. **Blocks never merge**, even back to back: a block ending at 20:00 and one starting at
    20:00 are separate, and an episode longer than either alone cannot be watched across
    them.
-4. **Leaving.** An episode can be watched only if it ends at or before its show's leaving
-   time; ending exactly at that time is allowed. Once a show has left, its unwatched
-   episodes are reported as unfinished, and watching moves on to the next show, within the
-   same block if time remains.
+4. **Leaving.** Before starting a show's next episode, check whether it would end after the
+   show's leaving time. If so, the show is done: its remaining episodes are unfinished, and
+   watching moves on to the next show immediately, within the same block if time remains.
+   If the episode would end before the leaving time but doesn't fit in the current block,
+   rule 2 applies: the rest of the block is wasted and the check happens again at the next
+   block. Ending exactly at the leaving time is allowed.
 5. **Days.** An episode is credited to the day on which it ends, and **midnight opens a
    day**: an episode ending at `00:00` counts for the new day, as does one ending at
    `00:20`.
 
 A show ends the week as `finished` (every episode watched, with the time its last one
 ended), `left` (it left the platform with episodes unwatched) or `out-of-time` (the week
-ran out with episodes unwatched).
+ran out with episodes unwatched). The two are told apart by the last block: a show whose
+leaving time falls at or before the end of the last block is `left`, and one still on the
+platform when the watching time ran out is `out-of-time`. A week with no blocks at all
+leaves every show `out-of-time`, whatever its leaving time, because no episode was ever
+watchable.
 
 ## The verdict
 

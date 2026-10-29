@@ -122,21 +122,20 @@ def plan(watchlist: Watchlist, week: Week) -> Plan:
         now = start
         while index < len(shows):
             show = shows[index]
-            leaves = None if show.leaves is None else minutes_of(show.leaves, "leaves")
             if episode >= len(show.episodes):  # every episode watched
                 index, episode = index + 1, 0
                 continue
-            if leaves is not None and leaves <= now:  # the show has left
+            leaves = None if show.leaves is None else minutes_of(show.leaves, "leaves")
+            finish = now + show.episodes[episode].minutes
+            # The leaving time is checked first, and on its own: a show whose next episode would
+            # end after it leaves is done now, whatever the block allows, and the next show takes
+            # the rest of this block. Only then does the block decide (rule 2).
+            if leaves is not None and finish > leaves:
                 left.add(index)
                 index, episode = index + 1, 0
                 continue
-            finish = now + show.episodes[episode].minutes
             if finish > end:  # it does not fit: the rest of this block is wasted
                 break
-            if leaves is not None and finish > leaves:  # it would end after the show leaves
-                left.add(index)
-                index, episode = index + 1, 0
-                continue
             watched.append(Watch(show=show.title, episode=show.episodes[episode].number, end=finish))
             now, episode = finish, episode + 1
             if episode == len(show.episodes):

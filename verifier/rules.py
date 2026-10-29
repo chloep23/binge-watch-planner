@@ -90,17 +90,14 @@ def simulate(shows, week):
             if episode >= len(show["episodes"]):
                 index, episode = index + 1, 0
                 continue
-            if show["leaves"] is not None and show["leaves"] <= now:
-                left.add(index)
-                index, episode = index + 1, 0
-                continue
             finish = now + show["episodes"][episode]["minutes"]
-            if finish > block["end"]:
-                break  # it does not fit: the rest of this block is wasted
+            # Leaving first, and on its own (rule 4); the block decides after that (rule 2).
             if show["leaves"] is not None and finish > show["leaves"]:
                 left.add(index)
                 index, episode = index + 1, 0
                 continue
+            if finish > block["end"]:
+                break  # it does not fit: the rest of this block is wasted
             watched.append((show["title"], show["episodes"][episode]["number"], finish))
             now, episode = finish, episode + 1
             if episode == len(show["episodes"]):

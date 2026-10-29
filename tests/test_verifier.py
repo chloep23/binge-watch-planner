@@ -322,6 +322,47 @@ def test_midnight_opens_the_new_day(tmp_path: Path) -> None:
     ]
 
 
+def test_leaving_is_checked_before_the_block(tmp_path: Path) -> None:
+    """Rule 4 before rule 2. Orbital Rooms leaves 19:30 and its episode runs 90 minutes, so it
+    would end at 20:30: after the leaving time AND past the 20:00 block end. The leaving time is
+    checked first, so the show is done at 19:00 and Low Tide Radio takes the block, 19:00-19:50.
+    Checking the block first would waste the block and watch nothing."""
+    run = Run(tmp_path, watchlist="watchlist_order.json", free_time="free_time_order.json")
+    report = run.gold()
+    assert [(w["show"], w["episode"], w["end"]) for w in report["days"][0]["episodes"]] == [
+        ("Low Tide Radio", 1, "2026-03-02 19:50")
+    ]
+    assert [(s["show"], s["outcome"], s["unwatched"]) for s in report["shows"]] == [
+        ("Orbital Rooms", "left", [1]),
+        ("Low Tide Radio", "finished", []),
+    ]
+    assert run.verdict()["valid"]
+
+
+def test_an_episode_that_ends_before_its_show_leaves_but_does_not_fit_waits(tmp_path: Path) -> None:
+    """The other half of rule 4: Glass Harbour 3 would end at 21:50, before its 2026-03-03 21:00
+    leaving time is irrelevant here because the block ends first. Rule 2 applies, the rest of the
+    block is wasted, and nothing of the next show is watched inside it."""
+    run = Run(tmp_path)
+    report = run.gold()
+    day = next(entry for entry in report["days"] if entry["date"] == "2026-03-06")
+    assert day["episodes"] == [], "Saltmarsh 2 ends before anything leaves, and fits neither block"
+
+
+def test_a_week_with_no_free_time_leaves_everything_out_of_time(tmp_path: Path) -> None:
+    """No blocks at all: nothing was ever watchable, so every show is out-of-time, including one
+    whose leaving time falls inside the week. Calling that one `left` would say the show's
+    departure was the reason, when the reason was having no viewing time at all."""
+    run = Run(tmp_path, watchlist="watchlist_empty.json", free_time="free_time_empty.json")
+    report = run.gold()
+    assert [entry["episodes"] for entry in report["days"]] == [[], []]
+    assert [(s["show"], s["outcome"]) for s in report["shows"]] == [
+        ("Saltmarsh", "out-of-time"),
+        ("Low Tide Radio", "out-of-time"),
+    ]
+    assert run.verdict()["valid"]
+
+
 def test_a_week_where_nothing_fits(tmp_path: Path) -> None:
     run = Run(tmp_path, watchlist="watchlist_tiny.json", free_time="free_time_tiny.json")
     report = run.gold()
