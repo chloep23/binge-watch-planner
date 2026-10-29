@@ -1,0 +1,20 @@
+_ > nanoagent.plugin.v0001.ProductConfig:
+tagline: "What you will actually finish this week, block by block"
+summary: >-
+  Binge Watch Planner takes the shows you mean to watch, in the order you mean to watch them, and
+  the evenings you actually have free, and tells you what gets finished and what does not. It
+  counts the way watching really works: an episode has to fit in one sitting, a gap at the end of
+  an evening is a gap, two evenings that happen to touch are still two evenings, and a show that
+  leaves the platform on Wednesday takes its unwatched episodes with it. Every answer is checked
+  by code that reads the same two files and applies the same rules, so a plan is either right or
+  it says which day is wrong.
+highlights:
+  - "Counts the leftovers: time at the end of a block that nothing fits into is time you lose"
+  - "Knows what leaves when, and moves straight on to the next show with the evening that is left"
+  - "Credits an episode to the day it ends on, even when that is after midnight"
+  - "Reads only the two files you point it at, and reaches no network at all"
+steps:
+  - "Write your watchlist and your free evenings as two JSON files in the plugin's folder"
+  - "Ask what you will finish that week"
+  - "It reads both files and walks the week block by block"
+  - "You get a day-by-day plan and, per show, when it was finished or what you missed"

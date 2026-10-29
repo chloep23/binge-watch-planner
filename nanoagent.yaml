@@ -1,0 +1,56 @@
+_ > nanoagent.plugin.v0001.ManifestConfig:
+id: binge-watch-planner
+name: Binge Watch Planner
+version: 0.1.0
+status: ready
+spec: nanoagent.plugin/v0001
+
+runtime > nanoagent.plugin.v0001.RuntimeConfig:
+  type: mcp_stdio
+  command: [uv, run, --frozen, python, -m, plugin]
+
+permissions > nanoagent.plugin.v0001.PermissionsConfig:
+  network > nanoagent.plugin.v0001.NetworkConfig:
+    hosts: []
+  filesystem > nanoagent.plugin.v0001.FilesystemConfig:
+    write: [workspace]
+
+# One entry per contract.Tool; its input and output classes are contract.TOOLS's.
+tools > dict[contract.Tool, nanoagent.plugin.v0001.ToolConfig]:
+  read_watchlist:
+    description: "Read a watchlist file: the shows in the order they must be watched, each episode's runtime in minutes, and when a show leaves the platform"
+  read_free_time:
+    description: "Read a free-time file: the week it covers and its blocks of free time, each a start and an end, in order and never overlapping"
+  report_schedule:
+    description: Merge the days and show outcomes it is given into this run's reports/<run>/plan.json and return the merged report so far, which the agent submits once every day and show is covered
+  plan_week:
+    description: Work a whole week out end to end from a watchlist and a free-time file, giving the episodes finished on each day and how each show ended
+  merge_free_time:
+    description: Join every pair of free-time blocks that touches or overlaps into one longer span, and say how many blocks were joined away
+  total_runtime:
+    description: The episode count and total runtime of each show, the watchlist's whole runtime, and the week's total free time, all in minutes
+
+# One entry per contract.Task; its input class is contract.TASKS's.
+tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
+  week-plan:
+    description: Work out which episodes of a watchlist get finished on each day of a week of free time, and for each show when it was completed or which episodes were left unwatched
+    runner: agent
+    tools: [read_watchlist, read_free_time, report_schedule, merge_free_time, total_runtime]
+    reference: plan_week
+    instructions: |-
+      Rules. Watch the shows in the watchlist's order and each show's episodes in theirs. A show is finished, or has left, before the next one starts: never skip ahead to a shorter episode or a later show.
+      Fitting. An episode must fit whole inside one block: it may start no earlier than the block's start and must end at or before its end. If the next episode does not fit in the time left, the rest of that block is wasted, and you move on to the next block.
+      Blocks. Blocks never merge, even when they touch. A block ending at 20:00 and one starting at 20:00 are two blocks, and an episode longer than either of them alone cannot be watched across them.
+      Leaving. An episode may be watched only if it ends at or before its show's leaving time; ending exactly at that time is allowed. Once a show has left, its unwatched episodes stay unwatched and you move on to the next show, in the same block if time is left in it.
+      Days. An episode counts for the day it ends on, and midnight opens a day: an episode ending at 00:00 or at 00:20 counts for the new day, not the one before.
+      Plan. Exactly four tool calls, one per step, nothing else: (1) read_watchlist; (2) read_free_time, with the task's two file names copied exactly as given; (3) report_schedule once, with every day of the week and every show; (4) submit. Reason briefly: one short line per block, no prose.
+      Reporting. report_schedule takes task (the task input, copied exactly as given), days (one entry per day from first_day to last_day, each with the episodes ending that day in the order they were watched, as show, episode and end) and shows (one entry per show, with outcome finished, left or out-of-time, finished_at when its last episode ended or null, and unwatched, the episode numbers never watched). Report every day, including days nothing was watched, with episodes [].
+      Other tools. merge_free_time and total_runtime answer narrower questions and are not how this task is solved: merged blocks are not the blocks you watch in, and free time adding up to more than the watchlist's runtime does not mean the watchlist gets finished.
+      Submit. When a call returns complete true, call submit with that call's report exactly as returned (task, run, days, shows), without changing or re-checking anything.
+  read-watchlist:
+    description: Read a watchlist file and state its shows in order, each one's episodes and runtimes, and when it leaves the platform
+    runner: tool
+    tools: [read_watchlist]
+    reference: null
+    instructions: |-
+      Call read_watchlist with the watchlist file's path in the workspace. Use it before a week-plan task to see which shows are on the list, how long each episode runs, and which shows leave the platform during the week.

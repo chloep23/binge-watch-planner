@@ -1,0 +1,58 @@
+{
+ "shows": [
+  {
+   "title": "Glass Harbour",
+   "leaves": "2026-03-03 21:00",
+   "episodes": [
+    {
+     "number": 1,
+     "minutes": 45
+    },
+    {
+     "number": 2,
+     "minutes": 60
+    },
+    {
+     "number": 3,
+     "minutes": 50
+    },
+    {
+     "number": 4,
+     "minutes": 40
+    }
+   ]
+  },
+  {
+   "title": "The Ninth Kitchen",
+   "leaves": null,
+   "episodes": [
+    {
+     "number": 1,
+     "minutes": 30
+    },
+    {
+     "number": 2,
+     "minutes": 30
+    },
+    {
+     "number": 3,
+     "minutes": 60
+    }
+   ]
+  },
+  {
+   "title": "Saltmarsh",
+   "leaves": null,
+   "episodes": [
+    {
+     "number": 1,
+     "minutes": 25
+    },
+    {
+     "number": 2,
+     "minutes": 50
+    }
+   ]
+  }
+ ]
+}
