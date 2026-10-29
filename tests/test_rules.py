@@ -144,3 +144,66 @@ def test_a_watchlist_that_breaks_the_format_is_refused_by_both(broken: dict) -> 
     assert found is None and problem
     with pytest.raises(RuleError):
         read_watchlist_data(broken)
+
+
+def test_the_two_simulations_agree_on_random_weeks_and_keep_the_invariants() -> None:
+    """1,200 random watchlists and weeks through both simulations. They must agree, and the
+    answer must keep the invariants the rules imply however it was reached: no episode watched
+    twice, each show watched as a prefix of its episodes in order, every watched episode inside
+    one real block, and unwatched exactly what was missed. The invariants are the part that
+    could catch a mistake both implementations share, since one hand wrote both."""
+    import random
+
+    from plugin.clock import day_minutes, minutes_of, stamp_text
+
+    randomly = random.Random(20261029)
+    first = day_minutes("2026-03-02", "d")
+    checked = 0
+    for _ in range(1200):
+        span = randomly.randint(1, 3)
+        last = first + (span - 1) * 1440
+        blocks, cursor = [], first + randomly.randint(0, 600)
+        for _ in range(randomly.randint(0, 5)):
+            start = cursor + randomly.randint(0, 400)
+            end = start + randomly.randint(1, 300)
+            if end > last + 1439:
+                break
+            blocks.append((stamp_text(start), stamp_text(end)))
+            cursor = end + randomly.randint(0, 120)
+        entries = []
+        for number in range(randomly.randint(1, 4)):
+            minutes = [randomly.choice([1, 20, 45, 60, 90, 150]) for _ in range(randomly.randint(1, 4))]
+            leaves = None if randomly.random() < 0.4 else stamp_text(first + randomly.randint(-60, span * 1440 + 60))
+            entries.append((f"S{number}", leaves, minutes))
+        watchlist = shows(*entries)
+        free_time = week(*blocks, first="2026-03-02", last=stamp_text(last)[:10])
+        if checked_parse(watchlist, free_time) is None:
+            continue
+        checked += 1
+        days, outcomes = both(watchlist, free_time)  # raises if the two disagree
+
+        from plugin.clock import minutes_of as _m
+        watched = [(t, n, _m(end, 'end')) for _, entries_of_day in days for t, n, end in entries_of_day]
+        assert len({(t, n) for t, n, _ in watched}) == len(watched), "an episode is watched twice"
+        spans = [(minutes_of(start, "s"), minutes_of(end, "e")) for start, end in blocks]
+        runtime = {(show["title"], item["number"]): item["minutes"] for show in watchlist["shows"] for item in show["episodes"]}
+        for title, number, end in watched:
+            start = end - runtime[(title, number)]
+            assert any(low <= start and end <= high for low, high in spans), f"{title} {number} crosses a block"
+        for show in watchlist["shows"]:
+            numbers = [item["number"] for item in show["episodes"]]
+            got = [n for t, n, _ in watched if t == show["title"]]
+            assert got == numbers[: len(got)], f"{show['title']} is not watched in order"
+            outcome = next(entry for entry in outcomes if entry[0] == show["title"])
+            assert (outcome[1] == "finished") == (not outcome[3])
+            assert outcome[3] == [n for n in numbers if n not in got]
+    assert checked > 800, "most random cases should be well formed"
+
+
+def checked_parse(watchlist, free_time):
+    """The pair, or None when the random case is not a well-formed one."""
+    found, problem = checked.parse_watchlist(watchlist)
+    if problem:
+        return None
+    week_found, problem = checked.parse_week(free_time)
+    return None if problem else (found, week_found)

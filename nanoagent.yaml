@@ -1,7 +1,7 @@
 _ > nanoagent.plugin.v0001.ManifestConfig:
 id: binge-watch-planner
 name: Binge Watch Planner
-version: 0.1.4
+version: 0.1.5
 status: ready
 spec: nanoagent.plugin/v0001
 
